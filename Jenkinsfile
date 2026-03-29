@@ -55,18 +55,20 @@ pipeline {
         stage('Prepare Inventory & Wait') {
             steps {
               script {
-                // 1. Redirect stderr (2) to /dev/null so only the raw ID is captured
-                def rawIp = sh(script: "terraform output -no-color -raw ec2_public_ip 2>/dev/null", returnStdout: true).trim()
-                def rawId = sh(script: "terraform output -no-color -raw ec2_id_test 2>/dev/null", returnStdout: true).trim()
+                  // 1. Capture the ID while throwing away all warnings/errors (2>/dev/null)
+                  def rawId = sh(script: "terraform output -no-color -raw ec2_id_test 2>/dev/null", returnStdout: true).trim()
+                  def rawIp = sh(script: "terraform output -no-color -raw ec2_public_ip 2>/dev/null", returnStdout: true).trim()
 
-                // 2. Clean up any remaining whitespace/newlines
-                def InstanceIp = rawIp.replaceAll(/\s+/, "")
-                def InstanceId = rawId.replaceAll(/\s+/, "")
+                  // 2. Pro-level safeguard: Keep only the ID format (starts with 'i-' followed by alphanumeric)
+                  def InstanceId = (rawId =~ /i-[a-z0-9]+/)[0]
+                  def InstanceIp = rawIp.split()[0] // Takes the first word only, ignoring any trailing warnings
 
-                writeFile file: 'aws_hosts', text: "${InstanceIp}"
+                  writeFile file: 'aws_hosts', text: "${InstanceIp}"
 
-                echo "Clean Instance ID: ${InstanceId}"
-                sh "aws ec2 wait instance-status-ok --region ap-south-1 --instance-ids ${InstanceId}" 
+                  echo "DEBUG: Final Cleaned ID is: ${InstanceId}"
+    
+                  // 3. Run the waiter
+                  sh "aws ec2 wait instance-status-ok --region ap-south-1 --instance-ids ${InstanceId}" 
               }
             }
         }
