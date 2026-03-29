@@ -48,8 +48,6 @@ pipeline {
 
         stage('Apply TF') {
             steps {
-                // Refresh ensures the state file is updated before the apply writes new outputs
-                sh 'terraform refresh' 
                 sh 'terraform apply tfplan'
             }
         }
