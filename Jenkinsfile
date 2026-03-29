@@ -15,7 +15,6 @@ pipeline {
     stages {
         stage('Checkout Source Code') {
             steps {
-                // FIXED: 'git' is one function; parameters must be on the same line or separated by commas
                 git url: 'git@github.com:Pratik1805/Docker-automation-using-ansible-jenkins-and-terraform.git',
                     branch: 'main',
                     credentialsId: "${env.GITHUB_SSH_KEY_ID}"
@@ -35,25 +34,30 @@ pipeline {
         }
 
         stage('Validate TF') {
+            when {
+                expression { return fileExists('tfplan') }
+            }
             input {
                 message "Do you want to apply this Plan?"
                 ok "Apply Plan"
             }
             steps {
-                echo 'Plan Accepted'
+                echo 'Plan file found and accepted by user.'
             }
         }
 
         stage('Apply TF') {
             steps {
-                sh 'terraform apply -auto-approve tfplan'
+                // Refresh ensures the state file is updated before the apply writes new outputs
+                sh 'terraform refresh' 
+                sh 'terraform apply tfplan'
             }
         }
 
         stage('Prepare Inventory & Wait') {
             steps {
                 script {
-                    // FIXED: Corrected 'returnStdout' typo
+                    // Since 'Apply' was successful, these outputs will now definitely exist in S3
                     def InstanceIp = sh(script: "terraform output -raw ec2_public_ip", returnStdout: true).trim()
                     def InstanceId = sh(script: "terraform output -raw ec2_id_test", returnStdout: true).trim()
 
@@ -67,9 +71,11 @@ pipeline {
 
         stage('Run Ansible') {
             when {
-                expression { return params.RUN_ANSIBLE == true }
+                all {
+                    expression { return params.RUN_ANSIBLE == true }
+                    expression { return fileExists('aws_hosts') }
+                }
             }
-            // FIXED: 'steps' must be outside/after 'when'
             steps {
                 ansiblePlaybook(
                     credentialsId: "${env.SSH_KEY_ID}",
@@ -84,7 +90,6 @@ pipeline {
 
     post {
         always {
-            // Good practice for Cloud Engineers: Clean up sensitive files
             sh 'rm -f tfplan aws_hosts'
             cleanWs()
         }
