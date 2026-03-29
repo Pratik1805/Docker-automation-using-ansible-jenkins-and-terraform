@@ -1,0 +1,53 @@
+-
+  name: Install Docker on EC2
+  hosts: all
+  become: true
+  vars:
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no' #ignore the "Unknown Host" warning
+  tasks:
+    - name: Update apt packages and install dependencies
+      apt:
+        name:
+        #These packages allow Ubuntu to communicate with external #repositories over HTTPS and manage software properties securely.
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes # sudo apt-get update
+        cache_valid_time: 3600  # Only updates if the last check was >1 hour ago
+
+    - name: Add Docker GPG apt key #Adding the "Digital Signature"
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository #Linking the Official Docker Store
+      apt_repository: 
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+#{{ ansible_distribution_release }}: This is a variable that Ansible fills in automatically (e.g., focal or jammy), ensuring you get the version of Docker designed for your specific version of Ubuntu.
+    
+    - name: Install docker Engine
+      apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: yes
+      vars:
+        packages:
+        - docker-ce # docker engine
+        - docker-ce-cli # docker cli
+        - containerd.io
+        - docker-compose-plugin
+        
+    - name: Start Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add 'ubuntu' user to docker group
+      user: 
+        name: ubuntu
+        groups: docker
+        append: yes    
