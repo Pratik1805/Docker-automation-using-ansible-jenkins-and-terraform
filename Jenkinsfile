@@ -54,16 +54,20 @@ pipeline {
 
         stage('Prepare Inventory & Wait') {
             steps {
-                script {
-                    // Since 'Apply' was successful, these outputs will now definitely exist in S3
-                    def InstanceIp = sh(script: "terraform output -no-color -raw ec2_public_ip", returnStdout: true).replaceAll(/[^a-zA-Z0-9-]/, '').trim()
-                    def InstanceId = sh(script: "terraform output -no-color -raw ec2_id_test", returnStdout: true).replaceAll(/[^a-zA-Z0-9-]/, '').trim()
+              script {
+                // 1. Redirect stderr (2) to /dev/null so only the raw ID is captured
+                def rawIp = sh(script: "terraform output -no-color -raw ec2_public_ip 2>/dev/null", returnStdout: true).trim()
+                def rawId = sh(script: "terraform output -no-color -raw ec2_id_test 2>/dev/null", returnStdout: true).trim()
 
-                    writeFile file: 'aws_hosts', text: "${InstanceIp}"
+                // 2. Clean up any remaining whitespace/newlines
+                def InstanceIp = rawIp.replaceAll(/\s+/, "")
+                def InstanceId = rawId.replaceAll(/\s+/, "")
 
-                    echo "Waiting for EC2 (${InstanceId}) to pass status checks..."
-                    sh "aws ec2 wait instance-status-ok --region ap-south-1 --instance-ids ${InstanceId}" 
-                }
+                writeFile file: 'aws_hosts', text: "${InstanceIp}"
+
+                echo "Clean Instance ID: ${InstanceId}"
+                sh "aws ec2 wait instance-status-ok --region ap-south-1 --instance-ids ${InstanceId}" 
+              }
             }
         }
 
