@@ -72,7 +72,7 @@ pipeline {
           ansiblePlaybook(
             credentialsId: "${env.SSH_KEY_ID}",
             inventory: 'aws_hosts',
-            playbook: 'ansible/Install_docker.yml'
+            playbook: 'ansible/Install_docker.yml',
             disableHostKeyChecking: true,
             colorized: true
           )
