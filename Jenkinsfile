@@ -1,6 +1,8 @@
 pipeline {
     agent any
-
+    tools {
+        terraform 'terraform' 
+    }
     parameters {
         booleanParam(name: 'RUN_ANSIBLE', defaultValue: true, description: "Install Docker after provisioning EC2?")
     }
