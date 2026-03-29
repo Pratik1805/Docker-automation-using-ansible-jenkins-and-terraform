@@ -52,7 +52,7 @@ resource "aws_instance" "my_instance" {
   ami             = var.ec2_ami__id
   instance_type   = var.instance_type
   key_name        = aws_key_pair.docker_automation_keypair.key_name
-  security_groups = [aws_security_group.my_security_group]
+  security_groups = [aws_security_group.my_security_group.name]
 
   depends_on = [aws_security_group.my_security_group, aws_key_pair.docker_automation_keypair]
 
