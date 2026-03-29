@@ -56,8 +56,8 @@ pipeline {
             steps {
                 script {
                     // Since 'Apply' was successful, these outputs will now definitely exist in S3
-                    def InstanceIp = sh(script: "terraform output -raw ec2_public_ip", returnStdout: true).trim()
-                    def InstanceId = sh(script: "terraform output -raw ec2_id_test", returnStdout: true).trim()
+                    def InstanceIp = sh(script: "terraform output -no-color -raw ec2_public_ip", returnStdout: true).replaceAll(/[^a-zA-Z0-9-]/, '').trim()
+                    def InstanceId = sh(script: "terraform output -no-color -raw ec2_id_test", returnStdout: true).replaceAll(/[^a-zA-Z0-9-]/, '').trim()
 
                     writeFile file: 'aws_hosts', text: "${InstanceIp}"
 
