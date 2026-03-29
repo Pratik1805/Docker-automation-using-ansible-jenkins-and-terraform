@@ -71,7 +71,7 @@ pipeline {
 
         stage('Run Ansible') {
             when {
-                all {
+                allOf {
                     expression { return params.RUN_ANSIBLE == true }
                     expression { return fileExists('aws_hosts') }
                 }
